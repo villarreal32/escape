@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Escape</title>
+<style>
+body {
+    margin: 0;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+    background: black;
+    color: white;
+    text-align: center;
+}
+
+.stars {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(white 1px, transparent 1px);
+    background-size: 40px 40px;
+    animation: moveStars 80s linear infinite;
+    opacity: 0.15;
+}
+
+@keyframes moveStars {
+    from {background-position: 0 0;}
+    to {background-position: 1000px 1000px;}
+}
+
+.container {
+    position: relative;
+    z-index: 2;
+    padding-top: 60px;
+}
+
+button {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    margin-top: 15px;
+}
+
+#gameArea {
+    position: relative;
+    width: 100%;
+    height: 300px;
+    margin-top: 20px;
+}
+
+.key {
+    position: absolute;
+    font-size: 40px;
+    cursor: pointer;
+}
+
+.hidden { display:none; }
+
+img {
+    max-width: 220px;
+    margin: 10px;
+    border-radius: 12px;
+}
+
+.heart {
+    position: fixed;
+    bottom: -20px;
+    font-size: 22px;
+    animation: floatUp linear forwards;
+}
+
+@keyframes floatUp {
+    from { transform: translateY(0); opacity:1; }
+    to { transform: translateY(-110vh); opacity:0; }
+}
+</style>
+</head>
+<body>
+
+<div class="stars"></div>
+
+<audio id="bgMusic" loop>
+    <source src="suspenso.mp3" type="audio/mpeg">
+</audio>
+
+<audio id="winMusic" loop>
+    <source src="victoria.mp3" type="audio/mpeg">
+</audio>
+
+<div class="container">
+    <h1>Escape</h1>
+    <p id="story">Tenés 20 segundos para atrapar 5 llaves.</p>
+    <p id="timer"></p>
+    <button onclick="startGame()">Comenzar</button>
+
+    <div id="gameArea" class="hidden"></div>
+    <div id="photos" class="hidden"></div>
+</div>
+
+<script>
+let caught = 0;
+let timeLeft = 20;
+let timerInterval;
+let attempts = 3;
+
+function startGame() {
+    document.querySelector("button").style.display = "none";
+    document.getElementById("bgMusic").play();
+    document.getElementById("gameArea").classList.remove("hidden");
+    spawnKey();
+    startTimer();
+}
+
+function startTimer() {
+    document.getElementById("timer").innerText = "Tiempo: " + timeLeft;
+    timerInterval = setInterval(() => {
+        timeLeft--;
+        document.getElementById("timer").innerText = "Tiempo: " + timeLeft;
+        if(timeLeft <= 0) {
+            clearInterval(timerInterval);
+            loseGame();
+        }
+    }, 1000);
+}
+
+function spawnKey() {
+    const gameArea = document.getElementById("gameArea");
+    const key = document.createElement("div");
+    key.classList.add("key");
+    key.innerText = "🔑";
+
+    key.style.left = Math.random() * (window.innerWidth - 50) + "px";
+    key.style.top = Math.random() * 250 + "px";
+
+    key.onclick = function() {
+        key.remove();
+        caught++;
+        if(caught >= 5) {
+            clearInterval(timerInterval);
+            unlockPhotos();
+        } else {
+            spawnKey();
+        }
+    };
+
+    gameArea.appendChild(key);
+}
+
+function loseGame() {
+    document.getElementById("story").innerText = "Tiempo agotado.";
+    document.getElementById("gameArea").classList.add("hidden");
+    document.getElementById("timer").innerText = "";
+    document.querySelector(".container").innerHTML +=
+        '<br><button onclick="location.reload()">Reintentar</button>';
+}
+
+function unlockPhotos() {
+    document.getElementById("gameArea").classList.add("hidden");
+    document.getElementById("timer").innerText = "";
+    document.getElementById("story").innerText = "Recuerdos desbloqueados.";
+
+    const photos = document.getElementById("photos");
+    photos.classList.remove("hidden");
+
+    photos.innerHTML = `
+        <img src="foto1.jpg">
+        <img src="foto2.jpg">
+        <img src="foto3.jpg">
+        <p>Ingresá el código (Intentos restantes: <span id="attempts">3</span>)</p>
+        <input id="secretInput" placeholder="Código">
+        <br>
+        <button onclick="checkCode()">Desbloquear</button>
+    `;
+}
+
+function checkCode() {
+    const code = document.getElementById("secretInput").value;
+    if(code === "210925") { // CAMBIAR CODIGO
+        finalScreen();
+    } else {
+        attempts--;
+        document.getElementById("attempts").innerText = attempts;
+        if(attempts <= 0) {
+            document.getElementById("photos").innerHTML =
+                "<h2>Acceso bloqueado.</h2><button onclick='location.reload()'>Reiniciar</button>";
+        }
+    }
+}
+
+function finalScreen() {
+    document.getElementById("bgMusic").pause();
+    document.getElementById("winMusic").play();
+
+    document.getElementById("photos").innerHTML =
+        "<h2>Acceso concedido.</h2><div id='countdown'></div>";
+
+    startCountdown();
+    startHearts();
+}
+
+function startCountdown() {
+    const reunionDate = new Date("2026-02-20T16:00:00"); // CAMBIAR FECHA
+    const countdownElement = document.getElementById("countdown");
+
+    setInterval(() => {
+        const now = new Date();
+        const diff = reunionDate - now;
+
+        if(diff <= 0) {
+            countdownElement.innerText = "Sin distancia.";
+            return;
+        }
+
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+        const minutes = Math.floor((diff / (1000 * 60)) % 60);
+        const seconds = Math.floor((diff / 1000) % 60);
+
+        countdownElement.innerText =
+            days + "d " + hours + "h " + minutes + "m " + seconds + "s";
+    }, 1000);
+}
+
+function startHearts() {
+    setInterval(() => {
+        const heart = document.createElement("div");
+        heart.classList.add("heart");
+        heart.innerText = "❤";
+        heart.style.left = Math.random() * 100 + "vw";
+        heart.style.animationDuration = (4 + Math.random()*3) + "s";
+        document.body.appendChild(heart);
+        setTimeout(() => heart.remove(), 6000);
+    }, 400);
+}
+</script>
+
+</body>
+</html>
